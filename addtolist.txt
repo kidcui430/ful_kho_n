@@ -1,0 +1,94 @@
+function addToList() {
+  const itemSelect = document.getElementById("itemSelect");
+  const typeSelect = document.getElementById("typeSelect");
+  const txNcc = document.getElementById("txNcc");
+  const productSelect = document.getElementById("productSelect");
+  const qtyInput = document.getElementById("qtyInput");
+  const noteInput = document.getElementById("noteInput");
+
+  const hdInput = document.getElementById("soHoaDonInput");
+  const poInput = document.getElementById("soPOInput");
+  const priceInput = document.getElementById("donGiaInput");
+
+  const so_luong = parseInt(qtyInput.value);
+  const ma_vt = itemSelect.value;
+  const loai_gd = typeSelect.value;
+
+  if (!ma_vt || !loai_gd || !qtyInput.value) {
+    return alert("Vui lòng chọn mặt hàng, loại giao dịch và nhập số lượng!");
+  }
+  if (so_luong < 1 || isNaN(so_luong)) {
+    return alert("Lỗi: Số lượng giao dịch phải lớn hơn 0!");
+  }
+
+  const itemDb = inventoryData.find((i) => i.ma_hang === ma_vt);
+  if (itemDb) {
+    let sl_trong_gio = 0;
+    cart.forEach((c) => {
+      if (c.ma_vt === ma_vt && c.loai_gd === loai_gd) {
+        sl_trong_gio += c.so_luong;
+      }
+    });
+    const tong_yeu_cau = so_luong + sl_trong_gio;
+
+    // if (loai_gd === "Xưởng mượn" && tong_yeu_cau > (itemDb.sl_ton_moi || 0)) {
+    //   return alert(`Lỗi: Kho Mới chỉ còn ${itemDb.sl_ton_moi || 0} cái!`);
+    // }
+    // if (loai_gd === "Xưởng trả" && tong_yeu_cau > (itemDb.sl_dang_muon || 0)) {
+    //   return alert(
+    //     `Lỗi: Xưởng hiện chỉ đang giữ ${itemDb.sl_dang_muon || 0} cái!`,
+    //   );
+    // }
+    // if (
+    //   (loai_gd === "Xuất GC" || loai_gd === "Xuất thanh lý") &&
+    //   tong_yeu_cau > (itemDb.sl_ton_cu || 0)
+    // ) {
+    //   return alert(
+    //     `Lỗi: Kho Cũ chỉ còn ${itemDb.sl_ton_cu || 0} cái! Không đủ để xuất.`,
+    //   );
+    // }
+    // if (loai_gd === "Nhập GC" && tong_yeu_cau > (itemDb.sl_dang_gc || 0)) {
+    //   return alert(
+    //     `Lỗi: Số lượng đang đi Gia Công hiện tại chỉ có ${itemDb.sl_dang_gc || 0}!`,
+    //   );
+    // }
+  }
+
+  let don_gia = priceInput && priceInput.value ? parseInt(priceInput.value) : 0;
+  let thanh_tien = don_gia * so_luong;
+
+  let valHD = hdInput && hdInput.value ? hdInput.value.trim() : "";
+  let valPO = poInput && poInput.value ? poInput.value.trim() : "";
+  let chungTuGop = valHD;
+  if (valPO)
+    chungTuGop = chungTuGop ? `${valHD} (PO: ${valPO})` : `PO: ${valPO}`;
+
+  // Fix tên Sản Phẩm Giỏ Hàng
+  let ten_sp_hien_thi = "";
+  if (productSelect && productSelect.selectedIndex > 0) {
+    ten_sp_hien_thi = productSelect.options[productSelect.selectedIndex].text;
+  }
+
+  cart.push({
+    ma_vt: ma_vt,
+    ten_vt: itemSelect.options[itemSelect.selectedIndex].text,
+    loai_gd: loai_gd,
+    so_luong: so_luong,
+    ncc: txNcc && !txNcc.classList.contains("hidden") ? txNcc.value : "",
+    ma_sp: productSelect ? productSelect.value : "",
+    ten_sp: ten_sp_hien_thi,
+    so_chung_tu: chungTuGop,
+    so_hd: valHD,
+    so_po: valPO,
+    don_gia: don_gia,
+    thanh_tien: thanh_tien,
+    ghi_chu: noteInput.value,
+  });
+
+  updateCartTable();
+  qtyInput.value = "";
+  noteInput.value = "";
+  if (hdInput) hdInput.value = "";
+  if (poInput) poInput.value = "";
+  if (priceInput) priceInput.value = "";
+}

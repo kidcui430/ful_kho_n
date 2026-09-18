@@ -1,0 +1,67 @@
+function populateDropdowns(items, nccs, san_pham_sx) {
+  const itemSelect = document.getElementById("itemSelect");
+  const txNcc = document.getElementById("txNcc");
+  const productSelect = document.getElementById("productSelect");
+
+  // --- 1. GHI NHỚ LỰA CHỌN HIỆN TẠI TRƯỚC KHI LÀM MỚI ---
+  const currentItem = itemSelect ? itemSelect.value : "";
+  const currentNcc = txNcc ? txNcc.value : "";
+  const currentSp = productSelect ? productSelect.value : "";
+
+  // --- 2. VẼ LẠI DANH SÁCH DROPDOWN (Như cũ) ---
+  if (itemSelect) {
+    itemSelect.innerHTML = '<option value="">-- Chọn mặt hàng --</option>';
+    items.forEach((i) => {
+      itemSelect.innerHTML += `<option value="${i.ma_hang}">${i.ten_hang}</option>`;
+    });
+
+    let stockHint = document.getElementById("stockHint");
+    if (!stockHint) {
+      stockHint = document.createElement("div");
+      stockHint.id = "stockHint";
+      stockHint.style.fontSize = "14px";
+      stockHint.style.marginTop = "5px";
+      stockHint.style.marginBottom = "10px";
+      stockHint.style.paddingLeft = "5px";
+      itemSelect.parentNode.insertBefore(stockHint, itemSelect.nextSibling);
+    }
+
+    itemSelect.onchange = function () {
+      const ma = this.value;
+      const item = inventoryData.find((i) => i.ma_hang === ma);
+      if (item) {
+        stockHint.innerHTML = `Tồn kho mới: <b style="color: var(--success);">${item.sl_ton_moi || 0}</b> &nbsp;|&nbsp; Xưởng giữ: <b style="color: #f59e0b;">${item.sl_dang_muon || 0}</b>`;
+      } else {
+        stockHint.innerHTML = "";
+      }
+    };
+  }
+
+  if (txNcc) {
+    txNcc.innerHTML = '<option value="">-- Chọn Nhà Cung Cấp --</option>';
+    nccs.forEach((n) => {
+      txNcc.innerHTML += `<option value="${n.ten_ncc}">${n.ten_ncc}</option>`;
+    });
+  }
+
+  if (productSelect) {
+    productSelect.innerHTML =
+      '<option value="">-- Dùng cho Sản phẩm SX nào? (Không bắt buộc) --</option>';
+    san_pham_sx.forEach((sp) => {
+      productSelect.innerHTML += `<option value="${sp.ma_sp}">${sp.ten_sp}</option>`;
+    });
+  }
+
+  // --- 3. PHỤC HỒI LẠI TRẠNG THÁI ĐÃ GHI NHỚ ---
+  if (itemSelect && currentItem) {
+    itemSelect.value = currentItem;
+    // Kích hoạt lại onchange để dòng chữ "Tồn kho" lập tức cập nhật số lượng mới nhất từ DB
+    itemSelect.dispatchEvent(new Event("change"));
+  }
+  if (txNcc && currentNcc) {
+    txNcc.value = currentNcc;
+  }
+  if (productSelect && currentSp) {
+    productSelect.value = currentSp;
+  }
+}

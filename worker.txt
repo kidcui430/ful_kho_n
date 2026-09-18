@@ -1,0 +1,189 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export default {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+    const url = new URL(request.url);
+
+    try {
+      // 1. API ĐĂNG NHẬP
+      if (url.pathname === "/api/login") {
+        const { ma_nv, password } = await request.json();
+        const user = await env.DB.prepare("SELECT * FROM User WHERE ma_nv = ? AND password = ?").bind(ma_nv, password).first();
+        if (!user) return new Response(JSON.stringify({ error: "Sai mật khẩu hoặc tài khoản" }), { status: 401, headers: corsHeaders });
+        return new Response(JSON.stringify(user), { headers: corsHeaders });
+      }
+      // THÊM MỚI: API ĐỔI MẬT KHẨU
+      if (url.pathname === "/api/change-password" && request.method === "POST") {
+        const { ma_nv, new_password } = await request.json();
+        await env.DB.prepare("UPDATE User SET password = ? WHERE ma_nv = ?").bind(new_password, ma_nv).run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      // 2. API LOAD KHỞI TẠO (Toàn bộ DB)
+      if (url.pathname === "/api/data" && request.method === "GET") {
+        const [items, nccs, sp, txs] = await Promise.all([
+          env.DB.prepare("SELECT * FROM Danh_Muc_Hang ORDER BY ma_hang").all(),
+          env.DB.prepare("SELECT * FROM Danh_Muc_NCC ORDER BY ma_ncc").all(),
+          env.DB.prepare("SELECT * FROM San_Pham_SX").all(),
+          env.DB.prepare(`
+            SELECT t.*, h.ten_hang, s.ten_sp 
+            FROM Lich_Su_Giao_Dich t 
+            LEFT JOIN Danh_Muc_Hang h ON t.ma_hang = h.ma_hang 
+            LEFT JOIN San_Pham_SX s ON t.ma_sp_sx = s.ma_sp
+            ORDER BY t.thoi_gian_gd DESC
+            LIMIT 1000
+          `).all(),
+        ]);
+        return new Response(JSON.stringify({ 
+          items: items.results, 
+          nccs: nccs.results, 
+          san_pham_sx: sp.results, 
+          txs: txs.results 
+        }), { headers: corsHeaders });
+      }
+
+      // 3. API VẬT TƯ
+      if (url.pathname === "/api/item/add") {
+        const i = await request.json();
+        await env.DB.prepare("INSERT INTO Danh_Muc_Hang (ma_hang, ten_hang, quy_cach, noi_san_xuat, don_vi_tinh, ma_ncc) VALUES (?, ?, ?, ?, ?, ?)")
+          .bind(i.ma_hang, i.ten_hang, i.quy_cach, i.noi_san_xuat, i.don_vi_tinh, "").run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+      if (url.pathname === "/api/item/delete") {
+        const { ma_hang } = await request.json();
+        await env.DB.prepare("DELETE FROM Danh_Muc_Hang WHERE ma_hang = ?").bind(ma_hang).run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+      if (url.pathname === "/api/item/update") {
+        const i = await request.json();
+        await env.DB.prepare("UPDATE Danh_Muc_Hang SET ten_hang=?, quy_cach=?, noi_san_xuat=?, don_vi_tinh=?, ma_ncc=? WHERE ma_hang=?")
+          .bind(i.ten_hang, i.quy_cach, i.noi_san_xuat, i.don_vi_tinh, i.ma_ncc, i.ma_hang).run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      // 4. API NHÀ CUNG CẤP
+      if (url.pathname === "/api/ncc" && request.method === "POST") {
+        const n = await request.json();
+        await env.DB.prepare("INSERT INTO Danh_Muc_NCC (ma_ncc, ten_ncc, dia_chi, so_dt, nguoi_lien_he, email, ghi_chu) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .bind(n.ma_ncc, n.ten_ncc, n.dia_chi || "", n.sdt || "", n.nguoi_lien_he || "", n.email || "", n.ghi_chu || "").run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+      if (url.pathname === "/api/ncc/delete") {
+        const { ma_ncc } = await request.json();
+        await env.DB.prepare("DELETE FROM Danh_Muc_NCC WHERE ma_ncc = ?").bind(ma_ncc).run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+      if (url.pathname === "/api/ncc/update") {
+        const n = await request.json();
+        await env.DB.prepare("UPDATE Danh_Muc_NCC SET ten_ncc=?, dia_chi=?, so_dt=?, nguoi_lien_he=?, email=?, ghi_chu=? WHERE ma_ncc=?")
+          .bind(n.ten_ncc, n.dia_chi, n.sdt, n.nguoi_lien_he, n.email, n.ghi_chu, n.ma_ncc).run();
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      // 5. API TẠO PHIẾU GIAO DỊCH
+      if (url.pathname === "/api/transactions") {
+        const payload = await request.json();
+        let stmts = [];
+        
+        for (let item of payload.transactions) {
+          let trang_thai = payload.bo_phan === "XUONG" ? "pending" : "approved";
+          
+          // Chèn vào LSGD kèm theo DATETIME('now') (Chuẩn mốc quốc tế, App.js sẽ tự bù giờ)
+          stmts.push(env.DB.prepare(`
+            INSERT INTO Lich_Su_Giao_Dich 
+            (ma_hang, nguoi_giao_dich, loai_giao_dich, so_luong, ma_sp_sx, ghi_chu, trang_thai, don_gia, so_chung_tu, thanh_tien, thoi_gian_gd) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', '+7 hours')))
+          `).bind(
+            item.ma_vt, payload.user_id, item.loai_gd, item.so_luong, 
+            item.ma_sp || "", item.ghi_chu || "", trang_thai, 
+            item.don_gia || 0, item.so_chung_tu || "",
+            (item.don_gia || 0) * item.so_luong,
+            item.tx_date ? item.tx_date + " 08:00:00" : null // Đẩy tx_date vào tham số cuối
+          ));
+          
+          // Cập nhật tồn kho tùy theo trạng thái
+          if (trang_thai === "pending") {
+            if (item.loai_gd === "Xưởng mượn") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_moi = sl_ton_moi - ? WHERE ma_hang = ?").bind(item.so_luong, item.ma_vt));
+            if (item.loai_gd === "Xưởng trả") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon - ? WHERE ma_hang = ?").bind(item.so_luong, item.ma_vt));
+          } else {
+            switch (item.loai_gd) {
+              case 'Nhập mới': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_moi = sl_ton_moi + ? WHERE ma_hang = ?").bind(item.so_luong, item.ma_vt)); break;
+              case 'Xưởng mượn': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon + ?, sl_ton_moi = sl_ton_moi - ? WHERE ma_hang = ?").bind(item.so_luong, item.so_luong, item.ma_vt)); break;
+              case 'Xưởng trả': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon - ?, sl_ton_cu = sl_ton_cu + ? WHERE ma_hang = ?").bind(item.so_luong, item.so_luong, item.ma_vt)); break;
+              case 'Xuất GC': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_cu = sl_ton_cu - ?, sl_dang_gc = sl_dang_gc + ? WHERE ma_hang = ?").bind(item.so_luong, item.so_luong, item.ma_vt)); break;
+              case 'Nhập GC': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_gc = sl_dang_gc - ?, sl_ton_gc = sl_ton_gc + ? WHERE ma_hang = ?").bind(item.so_luong, item.so_luong, item.ma_vt)); break;
+              case 'Xuất thanh lý': stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_cu = sl_ton_cu - ?, sl_thanh_ly = sl_thanh_ly + ? WHERE ma_hang = ?").bind(item.so_luong, item.so_luong, item.ma_vt)); break;
+            }
+          }
+        }
+        await env.DB.batch(stmts);
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      // 6. API PHÊ DUYỆT CỦA VĂN PHÒNG
+      if (url.pathname === "/api/approve") {
+        const { id, action } = await request.json();
+        const tx = await env.DB.prepare("SELECT * FROM Lich_Su_Giao_Dich WHERE id = ?").bind(id).first();
+        if (!tx) return new Response(JSON.stringify({ error: "Lỗi dữ liệu" }), { status: 400, headers: corsHeaders });
+        
+        let stmts = [];
+        if (action === "approve") {
+          stmts.push(env.DB.prepare("UPDATE Lich_Su_Giao_Dich SET trang_thai = 'approved' WHERE id = ?").bind(id));
+          if (tx.loai_giao_dich === "Xưởng mượn") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon + ? WHERE ma_hang = ?").bind(tx.so_luong, tx.ma_hang));
+          if (tx.loai_giao_dich === "Xưởng trả") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_cu = sl_ton_cu + ? WHERE ma_hang = ?").bind(tx.so_luong, tx.ma_hang));
+        } else {
+          stmts.push(env.DB.prepare("UPDATE Lich_Su_Giao_Dich SET trang_thai = 'rejected' WHERE id = ?").bind(id));
+          if (tx.loai_giao_dich === "Xưởng mượn") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_moi = sl_ton_moi + ? WHERE ma_hang = ?").bind(tx.so_luong, tx.ma_hang));
+          if (tx.loai_giao_dich === "Xưởng trả") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon + ? WHERE ma_hang = ?").bind(tx.so_luong, tx.ma_hang));
+        }
+        await env.DB.batch(stmts);
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      return new Response("API Running", { headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    }
+  },
+};
+// 6. API PHÊ DUYỆT CỦA VĂN PHÒNG
+      if (url.pathname === "/api/approve") {
+        const { id, action, ma_hang_thuc_te } = await request.json();
+        const tx = await env.DB.prepare("SELECT * FROM Lich_Su_Giao_Dich WHERE id = ?").bind(id).first();
+        if (!tx) return new Response(JSON.stringify({ error: "Lỗi dữ liệu" }), { status: 400, headers: corsHeaders });
+        
+        let stmts = [];
+        
+        // Ưu tiên lấy mã thật do Văn Phòng map từ Modal, nếu không có thì giữ mã cũ của phiếu
+        let final_ma_hang = ma_hang_thuc_te ? ma_hang_thuc_te : tx.ma_hang;
+
+        if (action === "approve") {
+          // Gắn luôn mã thật vào lịch sử giao dịch và đổi trạng thái
+          stmts.push(env.DB.prepare("UPDATE Lich_Su_Giao_Dich SET trang_thai = 'approved', ma_hang = ? WHERE id = ?").bind(final_ma_hang, id));
+          
+          // Trừ/cộng tồn kho vào cái mã thật (final_ma_hang)
+          if (tx.loai_giao_dich === "Xưởng mượn") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon + ? WHERE ma_hang = ?").bind(tx.so_luong, final_ma_hang));
+          if (tx.loai_giao_dich === "Xưởng trả") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_cu = sl_ton_cu + ? WHERE ma_hang = ?").bind(tx.so_luong, final_ma_hang));
+        } else {
+          stmts.push(env.DB.prepare("UPDATE Lich_Su_Giao_Dich SET trang_thai = 'rejected' WHERE id = ?").bind(id));
+          
+          // Từ chối thì hoàn lại kho cũng dựa trên mã thật
+          if (tx.loai_giao_dich === "Xưởng mượn") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_ton_moi = sl_ton_moi + ? WHERE ma_hang = ?").bind(tx.so_luong, final_ma_hang));
+          if (tx.loai_giao_dich === "Xưởng trả") stmts.push(env.DB.prepare("UPDATE Danh_Muc_Hang SET sl_dang_muon = sl_dang_muon + ? WHERE ma_hang = ?").bind(tx.so_luong, final_ma_hang));
+        }
+        
+        await env.DB.batch(stmts);
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      }
+
+      return new Response("API Running", { headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    }
+  },
+};

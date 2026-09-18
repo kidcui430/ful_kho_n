@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QUẢN LÝ DỤNG CỤ</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Cấu hình PWA / App -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+  </head>
+  <body>
+    <!-- ===================================== -->
+    <!-- MÀN HÌNH ĐĂNG NHẬP                    -->
+    <!-- ===================================== -->
+    <div id="loginView" class="container card login-box">
+      <div class="login-header-group">
+        <img src="logo.jpg" alt="Logo" class="sys-logo" />
+        <h2 class="sys-title">MỜI ĐĂNG NHẬP</h2>
+      </div>
+      <input
+        type="text"
+        id="username"
+        placeholder="Mã NV"
+        style="text-transform: uppercase"
+        onkeydown="if (event.key === 'Enter') login();"
+      />
+      <div style="position: relative; width: 100%">
+        <input
+          type="password"
+          id="password"
+          placeholder="Mật khẩu"
+          style="width: 100%; padding-right: 40px; box-sizing: border-box"
+          onkeydown="if (event.key === 'Enter') login();"
+        />
+        <span
+          id="toggleIcon"
+          onclick="togglePassword()"
+          style="
+            position: absolute;
+            right: 15px;
+            top: 35%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+            user-select: none;
+          "
+          title="Hiển thị mật khẩu"
+        >
+          🔒
+        </span>
+      </div>
+      <button
+        onclick="login()"
+        class="w-90"
+        style="display: block; margin: 0 auto; margin-top: 15px"
+      >
+        Đăng nhập
+      </button>
+    </div>
+
+    <!-- Modal Đổi Mật Khẩu Lần Đầu -->
+    <div id="changePassModal" class="modal hidden">
+      <div class="modal-content" style="max-width: 400px; text-align: center">
+        <h3 style="color: var(--danger); margin-bottom: 10px">Đổi Mật Khẩu</h3>
+        <p style="font-size: 14px; margin-bottom: 20px; color: #64748b">
+          Vui lòng đổi Mật Khẩu mới!
+        </p>
+        <div class="form-group" style="text-align: left">
+          <label>Mật khẩu mới:</label>
+          <input
+            type="password"
+            id="newPassword"
+            class="form-control"
+            placeholder="Nhập mật khẩu mới..."
+          />
+        </div>
+        <div class="form-group" style="text-align: left">
+          <label>Xác nhận mật khẩu:</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            class="form-control"
+            placeholder="Nhập lại mật khẩu..."
+          />
+        </div>
+        <button
+          onclick="submitChangePassword()"
+          class="primary btn-block"
+          style="margin-top: 15px"
+        >
+          Xác Nhận & Đăng Nhập
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================== -->
+    <!-- MÀN HÌNH CHÍNH TỔNG QUAN                -->
+    <!-- ===================================== -->
+    <div id="mainView" class="hidden">
+      <header class="no-print">
+        <div class="header-title-group">
+          <img src="logo.jpg" alt="Logo" class="sys-logo" />
+          <h3 class="sys-title">QUẢN LÝ DỤNG CỤ</h3>
+        </div>
+        <div class="user-info-block">
+          <span id="userInfo" style="margin-right: 1rem"></span>
+          <button onclick="logout()" class="danger btn-sm">Thoát</button>
+        </div>
+      </header>
+
+      <!-- Thanh điều hướng Chính -->
+      <div id="topNav" class="nav-menu no-print">
+        <button
+          class="nav-btn active"
+          onclick="switchTab('tab-giaodich')"
+          id="btn-tab-giaodich"
+        >
+          Bảng phát sinh DC
+        </button>
+        <button
+          class="nav-btn hidden"
+          onclick="switchTab('tab-vattu')"
+          id="btn-tab-vattu"
+        >
+          Quản Lý Dụng Cụ
+        </button>
+        <button
+          class="nav-btn hidden"
+          onclick="switchTab('tab-ncc')"
+          id="btn-tab-ncc"
+        >
+          Nhà Cung Cấp
+        </button>
+        <button
+          class="nav-btn hidden"
+          onclick="switchTab('tab-baocao')"
+          id="btn-tab-baocao"
+        >
+          📊 Báo Cáo Tổng Hợp
+        </button>
+      </div>
+
+      <div class="container">
+        <!-- ===================================== -->
+        <!-- TAB 1: GIAO DỊCH & LỊCH SỬ              -->
+        <!-- ===================================== -->
+        <div id="tab-giaodich" class="tab-content active">
+          <!-- Sub-nav cho Giao Dịch -->
+          <div class="sub-nav no-print">
+            <button
+              class="sub-btn active"
+              onclick="switchSubTab('giaodich', 'taophieu')"
+              id="btn-giaodich-taophieu"
+            >
+              📝 Tạo Phiếu
+            </button>
+            <button
+              class="sub-btn"
+              onclick="switchSubTab('giaodich', 'lichsu')"
+              id="btn-giaodich-lichsu"
+            >
+              🕒 Bảng Duyệt
+            </button>
+          </div>
+
+          <!-- Sub-tab: Tạo Phiếu -->
+          <div id="giaodich-taophieu" class="sub-content active">
+            <div
+              class="card no-print action-area"
+              style="display: flex; flex-wrap: wrap; gap: 20px"
+            >
+              <!-- Khu vực form -->
+              <div class="action-form" style="flex: 1; min-width: 300px">
+                <h2>Tạo Phiếu Giao Dịch</h2>
+                <input
+                  type="date"
+                  id="txDate"
+                  class="form-control"
+                  style="margin-bottom: 10px"
+                  title="Ngày giao dịch"
+                />
+                <!-- THÊM MỚI: Chọn phân loại trước khi nhập tên -->
+                <input
+                  list="phanLoaiList"
+                  id="phanLoaiSelect"
+                  class="form-control"
+                  placeholder="-Nhập/Chọn Phân loại(*)-"
+                  style="margin-bottom: 10px"
+                  autocomplete="off"
+                />
+                <datalist id="phanLoaiList">
+                  <option value="Tất cả"></option>
+                  <option value="Belt"></option>
+                  <option value="CBN"></option>
+                  <option value="Center Drill"></option>
+                  <option value="Cobalt Saw"></option>
+                  <option value="Collet"></option>
+                  <option value="Cutter"></option>
+                  <option value="Diamond Bar"></option>
+                  <option value="Dresser"></option>
+                  <option value="Dresser Ring"></option>
+                  <option value="Drill"></option>
+                  <option value="Ejecter Pin"></option>
+                  <option value="Endmill"></option>
+                  <option value="Feeler Gauge"></option>
+                  <option value="Flap Dics"></option>
+                  <option value="Flat Drill"></option>
+                  <option value="Grinding Stone"></option>
+                  <option value="Holder"></option>
+                  <option value="Insert"></option>
+                  <option value="Lưỡi Cưa"></option>
+                  <option value="Metal Saw"></option>
+                  <option value="Paper Ink"></option>
+                  <option value="Parts"></option>
+                  <option value="Pin Gauge"></option>
+                  <option value="Reamer"></option>
+                  <option value="Screw"></option>
+                  <option value="Screw Plug Gauge"></option>
+                  <option value="Soft Jaw"></option>
+                  <option value="Special Staggered Side Cutter"></option>
+                  <option value="Step Drill"></option>
+                  <option value="TAC Endmill"></option>
+                  <option value="Tap"></option>
+                  <option value="Taping Past"></option>
+                  <option value="Tapping Drill"></option>
+                  <option value="Tip"></option>
+                  <option value="Khác"></option>
+                </datalist>
+                <!-- 1. Ô dành cho Văn Phòng (Chỉ được chọn từ danh sách, cấm gõ bậy) -->
+                <select
+                  id="itemSelectVP"
+                  class="form-control"
+                  style="margin-bottom: 10px"
+                >
+                  <option value="">-Tên Dụng Cụ-</option>
+                </select>
+
+                <!-- 2. Ô dành cho Xưởng (Vừa chọn vừa được gõ tự do) -->
+                <input
+                  list="dataItems"
+                  id="itemSelectXuong"
+                  class="form-control hidden"
+                  placeholder="- Nhập Tên Dụng Cụ (Xưởng) -"
+                  autocomplete="off"
+                  style="margin-bottom: 10px"
+                />
+                <datalist id="dataItems"></datalist>
+                <select id="typeSelect"></select>
+                <input
+                  list="dataNccs"
+                  id="txNcc"
+                  class="form-control hidden"
+                  placeholder="-Nhà Cung Cấp-"
+                  autocomplete="off"
+                />
+                <datalist id="dataNccs"></datalist>
+                <select id="productSelect">
+                  <option value="">
+                    -Chạy mã hàng nào? (Không bắt buộc) -
+                  </option>
+                </select>
+
+                <!-- NHÓM CÁC TRƯỜNG KẾ TOÁN (HĐ, PO, ĐƠN GIÁ) -->
+                <div id="extraFields" style="display: none; margin-top: 10px">
+                  <input
+                    type="text"
+                    id="soHoaDonInput"
+                    placeholder="Số Hóa Đơn / Chứng từ"
+                    style="margin-bottom: 10px"
+                  />
+                  <input
+                    type="text"
+                    id="soPOInput"
+                    placeholder="Số PO (Đơn đặt hàng)"
+                    style="margin-bottom: 10px"
+                  />
+                  <input
+                    type="number"
+                    id="donGiaInput"
+                    placeholder="Đơn giá (VNĐ)"
+                    min="0"
+                    style="margin-bottom: 10px"
+                  />
+                </div>
+
+                <input
+                  type="number"
+                  id="qtyInput"
+                  placeholder="Số lượng"
+                  min="1"
+                />
+                <input type="text" id="noteInput" placeholder="Ghi chú thêm" />
+                <br />
+                <button onclick="addToList()" class="w-100-mobile">
+                  + Thêm vào phiếu
+                </button>
+              </div>
+
+              <!-- Khu vực Giỏ hàng -->
+              <div class="cart-area" style="flex: 2; min-width: 300px">
+                <h2>Danh sách chờ xử lý</h2>
+                <div class="table-responsive">
+                  <table id="cartTable">
+                    <thead>
+                      <tr>
+                        <th>Tên hàng</th>
+                        <th>Loại GD</th>
+                        <th>SL</th>
+                        <!-- Thêm class vp-only vào 5 cột này -->
+                        <th class="vp-only">Sản Phẩm</th>
+                        <th class="vp-only">Số Hóa Đơn</th>
+                        <th class="vp-only">Số PO</th>
+                        <th class="vp-only">Đơn giá</th>
+                        <th class="vp-only" style="color: var(--danger)">
+                          Thành tiền
+                        </th>
+                        <th>Ghi chú</th>
+                        <th>Xóa</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div style="margin-top: 1rem; text-align: right">
+                  <button
+                    onclick="submitTransaction()"
+                    class="success w-100-mobile"
+                  >
+                    Xác Nhận Phiếu
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-tab: Lịch Sử & Phê Duyệt -->
+          <div id="giaodich-lichsu" class="sub-content hidden card">
+            <h2>Lịch Sử & Phê Duyệt</h2>
+            <!-- Bộ lọc Lịch Sử -->
+            <div
+              id="filterZone"
+              style="
+                background: #f1f5f9;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+              "
+            >
+              <label style="font-weight: 500; font-size: 14px">Từ:</label>
+              <input
+                type="date"
+                id="filterFrom"
+                class="form-control"
+                style="width: auto; padding: 5px"
+              />
+              <label style="font-weight: 500; font-size: 14px">Đến:</label>
+              <input
+                type="date"
+                id="filterTo"
+                class="form-control"
+                style="width: auto; padding: 5px"
+              />
+              <select
+                id="filterType"
+                class="form-control"
+                style="width: auto; padding: 5px"
+              >
+                <option value="">-- Tất cả giao dịch --</option>
+                <option value="Nhập mới">Nhập mới</option>
+                <option value="Xưởng mượn">Xưởng mượn</option>
+                <option value="Xưởng trả">Xưởng trả</option>
+                <option value="Xuất GC">Xuất GC</option>
+                <option value="Nhập GC">Nhập GC</option>
+                <option value="Xuất thanh lý">Xuất thanh lý</option>
+              </select>
+              <input
+                type="text"
+                id="filterText"
+                class="form-control"
+                placeholder="Tìm tên/mã Dụng Cụ..."
+                style="width: 200px; padding: 5px"
+              />
+              <button onclick="applyHistoryFilter()" class="primary btn-sm">
+                Lọc
+              </button>
+              <button onclick="clearHistoryFilter()" class="danger btn-sm">
+                Xóa Lọc
+              </button>
+              <button
+                onclick="exportHistoryExcel()"
+                class="success btn-sm"
+                style="margin-left: auto"
+              >
+                Xuất Excel
+              </button>
+            </div>
+
+            <!-- Bảng chi tiết Lịch sử -->
+            <div class="table-responsive">
+              <table id="txTable">
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>Mã NV</th>
+                    <th>Tên gọi</th>
+                    <th>Tên Chuẩn (Kho)</th>
+                    <th>Loại</th>
+                    <th>SL</th>
+                    <th>Sản Phẩm SX</th>
+                    <th>Số Hóa Đơn</th>
+                    <th>Số PO</th>
+                    <th>Đơn giá</th>
+                    <th style="color: var(--danger)">Thành tiền</th>
+                    <th>Trạng thái</th>
+                    <th class="no-print act-col">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================== -->
+        <!-- TAB 2: QUẢN LÝ DỤNG CỤ                  -->
+        <!-- ===================================== -->
+        <div id="tab-vattu" class="tab-content hidden">
+          <div class="sub-nav no-print">
+            <button
+              class="sub-btn active"
+              onclick="switchSubTab('vattu', 'tonkho')"
+              id="btn-vattu-tonkho"
+            >
+              📦 Xuất Nhập Tồn
+            </button>
+            <button
+              class="sub-btn"
+              onclick="
+                switchSubTab('vattu', 'themMoi');
+                generateDungCuId();
+              "
+              id="btn-vattu-themMoi"
+            >
+              ➕ Thêm Dụng Cụ Mới
+            </button>
+          </div>
+
+          <div id="vattu-tonkho" class="sub-content active card">
+            <div class="flex-between no-print">
+              <h2 class="no-border">Bảng Tồn Kho</h2>
+              <div>
+                <div style="display: flex; gap: 10px">
+                  <input
+                    type="text"
+                    list="phanLoaiList"
+                    id="searchPhanLoai"
+                    placeholder="- Lọc Phân loại -"
+                    oninput="filterInventory()"
+                    class="form-control"
+                    style="width: 160px"
+                    autocomplete="off"
+                  />
+                  <input
+                    type="text"
+                    id="searchTenHang"
+                    list="searchTenHangList"
+                    placeholder="Tìm tên / mã dụng cụ..."
+                    onkeyup="filterInventory()"
+                    class="form-control"
+                    style="width: 220px"
+                    autocomplete="off"
+                  />
+                  <datalist id="searchTenHangList"></datalist>
+                </div>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table id="inventoryTable">
+                <thead>
+                  <tr>
+                    <th>Mã Dụng Cụ</th>
+                    <th>Tên Dụng Cụ</th>
+                    <th>Phân Loại</th>
+                    <th>ĐVT</th>
+                    <th style="color: var(--success)">Kho DC Mới</th>
+                    <th style="color: #e07fea">Xưởng đang Giữ</th>
+                    <th style="color: #f4eef3d7">Kho DC Cũ</th>
+                    <th style="color: var(--accent)">Đang đi GC</th>
+                    <th style="color: var(--danger)">Thanh Lý</th>
+                    <th
+                      class="no-print"
+                      style="min-width: 130px; text-align: center"
+                    >
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="vattu-themMoi" class="sub-content hidden card action-area">
+            <div class="action-form">
+              <h2>Thêm Mới Dụng Cụ</h2>
+              <input
+                type="text"
+                id="vtMa"
+                placeholder="Mã dụng cụ (Tự động)"
+                readonly
+                style="
+                  background-color: #e9ecef;
+                  cursor: not-allowed;
+                  font-weight: bold;
+                  color: var(--navy);
+                "
+              />
+              <!-- THÊM MỚI: Ô chọn Phân Loại -->
+              <input
+                list="phanLoaiList"
+                id="vtPhanLoai"
+                class="form-control"
+                placeholder="-Nhập/Chọn Phân loại(*)-"
+                style="margin-bottom: 15px"
+                autocomplete="off"
+              />
+              <!-- Không cần chèn lại <datalist> ở đây nữa vì nó có thể dùng chung cái phanLoaiList đã tạo ở trên -->
+              <input type="text" id="vtTen" placeholder="Tên dụng cụ" />
+              <input
+                type="text"
+                id="vtQuyCach"
+                placeholder="Quy cách (Kích thước, model...)"
+              />
+              <input type="text" id="vtNoiSX" placeholder="Nơi sản xuất" />
+              <select id="vtDVT">
+                <option value="Pcs">Pcs</option>
+                <option value="Kg">Kg</option>
+                <option value="Tấm">Tấm</option>
+                <option value="Thùng">Thùng</option>
+                <option value="Hộp">Hộp</option>
+                <option value="Mét">Mét</option>
+                <option value="Lít">Lít</option>
+                <option value="Bộ">Bộ</option>
+              </select>
+              <button onclick="addItem()" class="success w-100-mobile">
+                + Thêm Vật Tư
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================== -->
+        <!-- TAB 3: QUẢN LÝ NHÀ CUNG CẤP             -->
+        <!-- ===================================== -->
+        <div id="tab-ncc" class="tab-content hidden">
+          <div class="sub-nav no-print">
+            <button
+              class="sub-btn active"
+              onclick="switchSubTab('ncc', 'dsncc')"
+              id="btn-ncc-dsncc"
+            >
+              🏢 Danh Sách NCC
+            </button>
+            <button
+              class="sub-btn"
+              onclick="
+                switchSubTab('ncc', 'themncc');
+                generateNccId();
+              "
+              id="btn-ncc-themncc"
+            >
+              ➕ Thêm NCC Mới
+            </button>
+          </div>
+
+          <div id="ncc-dsncc" class="sub-content active card">
+            <div class="flex-between no-print" style="margin-bottom: 10px">
+              <h2 class="no-border" style="margin: 0">Danh Sách NCC</h2>
+              <input
+                type="text"
+                id="searchNcc"
+                placeholder="Tìm mã / tên NCC..."
+                onkeyup="filterSupplier()"
+                class="form-control"
+                style="width: 250px"
+              />
+            </div>
+            <div class="table-responsive">
+              <table id="nccTable">
+                <thead>
+                  <tr>
+                    <th>Mã NCC</th>
+                    <th>Tên NCC</th>
+                    <th>Địa Chỉ</th>
+                    <th>SĐT</th>
+                    <th>Người Liên Hệ</th>
+                    <th>Email</th>
+                    <th>Ghi Chú</th>
+                    <th class="no-print">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ĐÃ SỬA: THÊM LABEL VÀ ĐỔI SDT THÀNH TYPE="TEXT" -->
+          <div id="ncc-themncc" class="sub-content hidden card action-area">
+            <div class="action-form">
+              <h2>Thêm NCC Mới</h2>
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Mã hệ thống tự cấp:</label
+              >
+              <input
+                type="text"
+                id="nccMa"
+                placeholder="Mã NCC"
+                readonly
+                style="
+                  background-color: #e9ecef;
+                  cursor: not-allowed;
+                  font-weight: bold;
+                  color: var(--navy);
+                  margin-bottom: 12px;
+                "
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Tên Nhà Cung Cấp (*):</label
+              >
+              <input
+                type="text"
+                id="nccTen"
+                placeholder="Nhập tên Cty / Xưởng..."
+                style="margin-bottom: 12px"
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Địa chỉ:</label
+              >
+              <input
+                type="text"
+                id="nccDiaChi"
+                placeholder="Nhập địa chỉ..."
+                style="margin-bottom: 12px"
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Số điện thoại:</label
+              >
+              <input
+                type="text"
+                id="nccSDT"
+                placeholder="VD: 0989999999"
+                style="margin-bottom: 12px"
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Người liên hệ:</label
+              >
+              <input
+                type="text"
+                id="nccLienHe"
+                placeholder="Tên người đại diện..."
+                style="margin-bottom: 12px"
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Email:</label
+              >
+              <input
+                type="email"
+                id="nccEmail"
+                placeholder="Email liên hệ..."
+                style="margin-bottom: 12px"
+              />
+
+              <label
+                style="
+                  font-size: 13px;
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                  display: block;
+                  color: #555;
+                "
+                >Ghi chú thêm:</label
+              >
+              <input
+                type="text"
+                id="nccGhiChu"
+                placeholder="Các thông tin lưu ý khác..."
+                style="margin-bottom: 20px"
+              />
+
+              <button onclick="addSupplier()" class="success w-100-mobile">
+                + Thêm NCC
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB BÁO CÁO TỔNG HỢP -->
+    <div id="tab-baocao" class="tab-content hidden">
+      <div
+        class="flex-between"
+        style="
+          margin-bottom: 15px;
+          background: #f8fafc;
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 15px;
+        "
+      >
+        <h3 style="margin: 0; color: #1e293b">Báo Cáo Tổng Hợp</h3>
+        <div
+          style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"
+        >
+          <label style="font-size: 13px; font-weight: bold">Từ:</label>
+          <input
+            type="date"
+            id="repFrom"
+            class="form-control"
+            style="width: 140px"
+          />
+
+          <label style="font-size: 13px; font-weight: bold">Đến:</label>
+          <input
+            type="date"
+            id="repTo"
+            class="form-control"
+            style="width: 140px"
+          />
+
+          <input
+            type="text"
+            id="repSearch"
+            placeholder="Tìm tên/mã..."
+            class="form-control"
+            style="width: 160px"
+          />
+
+          <button onclick="generateReport()" class="primary btn-sm">
+            Xem Báo Cáo
+          </button>
+          <button onclick="exportReportExcel()" class="success btn-sm">
+            Xuất Excel
+          </button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table id="reportTable" class="table">
+          <thead>
+            <tr>
+              <th>Mã Dụng Cụ</th>
+              <th>Tên Dụng Cụ</th>
+              <th style="color: var(--happy)">Nhập Mới</th>
+              <th style="color: var(--warning)">Xưởng Mượn</th>
+              <th style="color: #64748b">Xưởng Trả</th>
+              <th style="color: var(--accent)">Xuất Gia Công</th>
+              <th style="color: #6495ed">Thanh Lý</th>
+              <th style="color: #8a2be2">Tổng Tiền (VNĐ)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                colspan="8"
+                style="text-align: center; padding: 30px; color: #94a3b8"
+              >
+                Chọn ngày và bấm "Xem Báo Cáo".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================================== -->
+    <!-- MODALS (BẢNG THÔNG BÁO / CHỈNH SỬA)     -->
+    <!-- ===================================== -->
+    <div id="itemDetailModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">X</span>
+        <h2
+          id="modalTitle"
+          style="
+            margin-top: 0;
+            color: var(--navy);
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+          "
+        >
+          Chi Tiết Dụng Cụ
+        </h2>
+        <div id="modalBody" style="line-height: 1.8; font-size: 16px"></div>
+      </div>
+    </div>
+
+    <div id="editItemModal" class="modal hidden">
+      <div class="modal-content" style="max-width: 500px">
+        <span
+          class="close-btn"
+          onclick="
+            document.getElementById('editItemModal').classList.add('hidden')
+          "
+          >X</span
+        >
+        <h2
+          style="
+            margin-top: 0;
+            color: var(--navy);
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+          "
+        >
+          Chỉnh Sửa Dụng Cụ
+        </h2>
+        <input type="hidden" id="editItemMa" />
+
+        <div style="margin-bottom: 10px">
+          <label>Phân loại:</label>
+          <input
+            list="phanLoaiList"
+            id="editItemPhanLoai"
+            class="form-control"
+            autocomplete="off"
+          />
+        </div>
+
+        <div style="margin-bottom: 10px">
+          <label>Tên dụng cụ:</label>
+          <input type="text" id="editItemTen" class="form-control" />
+        </div>
+
+        <div style="margin-bottom: 10px">
+          <label>Quy cách:</label>
+          <input type="text" id="editItemQc" class="form-control" />
+        </div>
+
+        <div style="margin-bottom: 10px">
+          <label>Nơi sản xuất:</label>
+          <input type="text" id="editItemNsx" class="form-control" />
+        </div>
+
+        <div style="margin-bottom: 10px">
+          <label>Đơn vị tính:</label>
+          <input type="text" id="editItemDvt" class="form-control" />
+        </div>
+
+        <div style="margin-bottom: 20px">
+          <label>Mã Nhà Cung Cấp:</label>
+          <input type="text" id="editItemNcc" class="form-control" />
+        </div>
+
+        <button onclick="submitEditItem()" class="success">Lưu Thay Đổi</button>
+      </div>
+    </div>
+
+    <!-- ĐÃ SỬA MODAL NCC: TYPE SDT VÀ THÊM TRƯỜNG GHI CHÚ -->
+    <div id="editNccModal" class="modal hidden">
+      <div class="modal-content" style="max-width: 500px">
+        <span
+          class="close-btn"
+          onclick="
+            document.getElementById('editNccModal').classList.add('hidden')
+          "
+          >X</span
+        >
+        <h2
+          style="
+            margin-top: 0;
+            color: var(--navy);
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+          "
+        >
+          Chỉnh Sửa NCC
+        </h2>
+        <input type="hidden" id="editNccMa" />
+        <div style="margin-bottom: 10px">
+          <label>Tên NCC:</label
+          ><input type="text" id="editNccTen" class="form-control" />
+        </div>
+        <div style="margin-bottom: 10px">
+          <label>Người liên hệ:</label
+          ><input type="text" id="editNccLh" class="form-control" />
+        </div>
+        <div style="margin-bottom: 10px">
+          <label>Số điện thoại:</label
+          ><input type="text" id="editNccSdt" class="form-control" />
+        </div>
+        <div style="margin-bottom: 10px">
+          <label>Email:</label
+          ><input type="text" id="editNccEmail" class="form-control" />
+        </div>
+        <div style="margin-bottom: 10px">
+          <label>Địa chỉ:</label
+          ><input type="text" id="editNccDc" class="form-control" />
+        </div>
+        <div style="margin-bottom: 20px">
+          <label>Ghi chú:</label
+          ><input type="text" id="editNccGhiChu" class="form-control" />
+        </div>
+        <button onclick="submitEditNcc()" class="success">Lưu Thay Đổi</button>
+      </div>
+    </div>
+    <!-- MODAL DUYỆT PHIẾU DÀNH CHO VĂN PHÒNG -->
+    <div id="approveModal" class="modal hidden">
+      <div class="modal-content" style="max-width: 450px">
+        <h3 style="color: var(--primary); margin-bottom: 5px">Xem & Duyệt</h3>
+        <div
+          id="approveModalDesc"
+          style="
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+          "
+        >
+          <!-- Nội dung phiếu xưởng gửi lên sẽ hiện ở đây -->
+        </div>
+
+        <div class="form-group">
+          <label>1. Phân Loại:</label>
+          <input
+            list="phanLoaiList"
+            id="approvePhanLoai"
+            class="form-control"
+            placeholder="- Lọc Phân loại -"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>2. Tên Dụng Cụ chuẩn:</label>
+          <input
+            list="approveDataItems"
+            id="approveItemSelect"
+            class="form-control"
+            placeholder="- Mời nhập -"
+          />
+          <datalist id="approveDataItems"></datalist>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px">
+          <button
+            onclick="confirmApproval('approve')"
+            class="success btn-block"
+            style="flex: 1"
+          >
+            Duyệt Phiếu
+          </button>
+          <button
+            onclick="confirmApproval('reject')"
+            class="danger btn-block"
+            style="flex: 1"
+          >
+            Từ chối
+          </button>
+        </div>
+        <button
+          onclick="closeApproveModal()"
+          class="btn-block"
+          style="margin-top: 10px; background: #e2e8f0; color: #333"
+        >
+          Đóng / Hủy
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
