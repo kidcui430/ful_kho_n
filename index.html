@@ -763,7 +763,7 @@
           gap: 15px;
         "
       >
-        <h3 style="margin: 0; color: #1e293b">Báo Cáo Tổng Hợp</h3>
+        <h3 style="margin: 0; color: #1e293b">Báo Cáo</h3>
         <div
           style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"
         >
@@ -782,6 +782,20 @@
             class="form-control"
             style="width: 140px"
           />
+          <select
+            id="repFilterType"
+            onchange="generateReport()"
+            class="form-control"
+            style="width: auto; padding: 5px"
+          >
+            <option value="">-- Tất cả giao dịch --</option>
+            <option value="nhập mới">Nhập mới</option>
+            <option value="xưởng mượn">Xưởng mượn</option>
+            <option value="xưởng trả">Xưởng trả</option>
+            <option value="xuất gc">Xuất GC</option>
+            <option value="nhập gc">Nhập GC</option>
+            <option value="xuất thanh lý">Xuất thanh lý</option>
+          </select>
 
           <input
             type="text"

@@ -1537,13 +1537,28 @@ async function confirmApproval(action) {
 }
 
 function generateReport() {
-  const fromDate = document.getElementById("repFrom").value;
-  const toDate = document.getElementById("repTo").value;
-  const search = document
-    .getElementById("repSearch")
-    .value.toLowerCase()
-    .trim();
+  console.log("=== BẮT ĐẦU CHẠY BÁO CÁO ==="); // Đoạn này để dò lỗi
+
+  const fromDate = document.getElementById("repFrom")
+    ? document.getElementById("repFrom").value
+    : "";
+  const toDate = document.getElementById("repTo")
+    ? document.getElementById("repTo").value
+    : "";
+  const search = document.getElementById("repSearch")
+    ? document.getElementById("repSearch").value.toLowerCase().trim()
+    : "";
+
+  // Lấy an toàn giá trị lọc
+  const filterElement = document.getElementById("repFilterType");
+  const filterType = filterElement
+    ? filterElement.value.toLowerCase().trim()
+    : "";
+
+  console.log("Loại giao dịch đang chọn:", filterType);
+
   const tbody = document.querySelector("#reportTable tbody");
+  if (!tbody) return;
 
   let validTxs = allTransactions.filter((tx) => tx.trang_thai === "approved");
 
@@ -1557,6 +1572,16 @@ function generateReport() {
       (tx) => (tx.thoi_gian_gd || tx.created_at).substring(0, 10) <= toDate,
     );
   }
+
+  // LOGIC LỌC SIÊU AN TOÀN: Ép tất cả về chữ thường và cắt khoảng trắng
+  if (filterType !== "") {
+    validTxs = validTxs.filter((tx) => {
+      let loaiGD = (tx.loai_giao_dich || tx.loai_gd || "").toLowerCase().trim();
+      return loaiGD === filterType || loaiGD.includes(filterType);
+    });
+  }
+
+  console.log("Số lượng phiếu lọc được:", validTxs.length);
 
   let reportData = {};
   validTxs.forEach((tx) => {
@@ -1576,20 +1601,18 @@ function generateReport() {
       };
     }
 
-    let loai = tx.loai_giao_dich || tx.loai_gd;
+    let loai = (tx.loai_giao_dich || tx.loai_gd || "").toLowerCase().trim();
     let sl = parseInt(tx.so_luong) || 0;
     let tien = parseInt(tx.thanh_tien) || 0;
 
-    if (loai === "Nhập mới" || loai === "Nhập DC mới") {
+    if (loai === "nhập mới" || loai === "nhập dc mới") {
       reportData[ma].nhap_moi += sl;
       reportData[ma].tong_tien += tien;
-    } else if (loai === "Xưởng mượn") reportData[ma].xuong_muon += sl;
-    else if (loai === "Xưởng trả") reportData[ma].xuong_tra += sl;
-    else if (loai === "Xuất GC") reportData[ma].xuat_gc += sl;
-    else if (loai === "Nhập GC") {
-      // Nhập GC giờ gom chung tiền báo cáo, không hiện cột số lượng
-      reportData[ma].tong_tien += tien;
-    } else if (loai === "Xuất thanh lý") reportData[ma].thanh_ly += sl;
+    } else if (loai === "xưởng mượn") reportData[ma].xuong_muon += sl;
+    else if (loai === "xưởng trả") reportData[ma].xuong_tra += sl;
+    else if (loai === "xuất gc") reportData[ma].xuat_gc += sl;
+    else if (loai === "nhập gc") reportData[ma].tong_tien += tien;
+    else if (loai === "xuất thanh lý") reportData[ma].thanh_ly += sl;
   });
 
   let finalArray = Object.keys(reportData).map((ma) => ({
@@ -1605,24 +1628,20 @@ function generateReport() {
     );
   }
 
-  // ĐÃ SỬA: colspan="8" cho khớp giao diện mới
   if (finalArray.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px;">Không có dữ liệu phát sinh trong thời gian này.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px;">Không có dữ liệu!</td></tr>`;
     return;
   }
 
   let htmlRows = [];
-
-  // KHAI BÁO CÁC BIẾN TỔNG
-  let sumNhapMoi = 0;
-  let sumXuongMuon = 0;
-  let sumXuongTra = 0;
-  let sumXuatGC = 0;
-  let sumThanhLy = 0;
-  let sumTongTien = 0;
+  let sumNhapMoi = 0,
+    sumXuongMuon = 0,
+    sumXuongTra = 0,
+    sumXuatGC = 0,
+    sumThanhLy = 0,
+    sumTongTien = 0;
 
   finalArray.forEach((r) => {
-    // CỘNG DỒN TỔNG SỐ
     sumNhapMoi += r.nhap_moi;
     sumXuongMuon += r.xuong_muon;
     sumXuongTra += r.xuong_tra;
@@ -1647,10 +1666,9 @@ function generateReport() {
     `);
   });
 
-  // CHÈN DÒNG TỔNG CỘNG VÀO CUỐI BẢNG BÁO CÁO
   htmlRows.push(`
     <tr style="font-weight: bold; background-color: #e2e8f0;">
-      <td colspan="2" style="text-align: right; color: #334155;">TỔNG CỘNG:</td>
+      <td colspan="2" style="text-align: right; color: #334155;">TỔNG TOÀN BỘ:</td>
       <td style="color: var(--success)">${sumNhapMoi > 0 ? sumNhapMoi : "-"}</td>
       <td style="color: var(--warning)">${sumXuongMuon > 0 ? sumXuongMuon : "-"}</td>
       <td style="color: #64748b">${sumXuongTra > 0 ? sumXuongTra : "-"}</td>
