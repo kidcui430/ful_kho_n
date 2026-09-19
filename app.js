@@ -464,12 +464,11 @@ function renderInventoryTable(items, limit = 50) {
   });
 }
 
-// Bảng lịch sử (Fix Thành Tiền, PO, HD)
+// Bảng lịch sử (Đã ẩn Tiền, PO, Hóa Đơn đối với Xưởng)
 function renderHistoryTable(transactions, limit = 50) {
   const tbody = document.querySelector("#txTable tbody");
   if (!tbody) return;
 
-  // Cắt lấy 50 dòng mới nhất cho nhẹ web
   const dataToRender = limit > 0 ? transactions.slice(0, limit) : transactions;
 
   if (dataToRender.length === 0) {
@@ -477,17 +476,29 @@ function renderHistoryTable(transactions, limit = 50) {
     return;
   }
 
-  // Dùng mảng để gom code HTML
-  let htmlRows = [];
+  // 1. KIỂM TRA QUYỀN: Là Văn Phòng thì true, là Xưởng thì false
+  const isVP = user.bo_phan !== "XUONG";
 
-  // 1. KHAI BÁO BIẾN GOM TỔNG
+  // 2. ẨN/HIỆN TIÊU ĐỀ CỘT TRÊN HTML
+  // (Đại ca nhớ thêm id="th-sohd" và id="th-sopo" vào 2 thẻ <th> tương ứng bên file HTML nhé)
+  const thDonGia = document.getElementById("th-dongia");
+  const thThanhTien = document.getElementById("th-thanhtien");
+  const thSoHD = document.getElementById("th-sohd");
+  const thSoPO = document.getElementById("th-sopo");
+
+  if (thDonGia) thDonGia.style.display = isVP ? "" : "none";
+  if (thThanhTien) thThanhTien.style.display = isVP ? "" : "none";
+  if (thSoHD) thSoHD.style.display = isVP ? "" : "none";
+  if (thSoPO) thSoPO.style.display = isVP ? "" : "none";
+
+  let htmlRows = [];
   let totalSL = 0;
   let totalTien = 0;
 
   dataToRender.forEach((tx) => {
-    // 2. CỘNG DỒN NGAY BÊN TRONG VÒNG LẶP
     totalSL += parseInt(tx.so_luong) || 0;
     totalTien += parseInt(tx.thanh_tien) || 0;
+
     let donGiaFmt = tx.don_gia ? tx.don_gia.toLocaleString() : "-";
     let thanhTienFmt = tx.thanh_tien ? tx.thanh_tien.toLocaleString() : "-";
 
@@ -505,7 +516,7 @@ function renderHistoryTable(transactions, limit = 50) {
           : "var(--danger)";
 
     let actionHtml = "";
-    if (user.bo_phan !== "XUONG") {
+    if (isVP) {
       if (tx.trang_thai === "pending") {
         actionHtml = `<button onclick="openApproveModal(${tx.id})" class="primary btn-sm">Xử lý phiếu</button>`;
       } else {
@@ -524,7 +535,16 @@ function renderHistoryTable(transactions, limit = 50) {
       l_chuan = "⏳ Chờ xử lý";
     }
 
-    // Nhét thẳng text HTML vào mảng thay vì createElement
+    // 3. GỘP CHUNG 4 CỘT DÀNH RIÊNG CHO VĂN PHÒNG
+    let cotVanPhongHtml = isVP
+      ? `
+        <td>${l_hd}</td>
+        <td>${l_po}</td>
+        <td>${donGiaFmt}</td>
+        <td style="color: var(--danger); font-weight:bold;">${thanhTienFmt}</td>
+    `
+      : "";
+
     htmlRows.push(`
       <tr>
         <td>${formatShortDate(tx.thoi_gian_gd || tx.created_at)}</td>
@@ -534,28 +554,32 @@ function renderHistoryTable(transactions, limit = 50) {
         <td>${l_gd}</td>
         <td>${tx.so_luong}</td>
         <td>${l_sp}</td>
-        <td>${l_hd}</td>
-        <td>${l_po}</td>
-        <td>${donGiaFmt}</td>
-        <td style="color: var(--danger); font-weight:bold;">${thanhTienFmt}</td>
+        ${cotVanPhongHtml} <!-- Nhúng 4 cột của VP vào đây -->
         <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
         <td class="no-print act-col">${actionHtml}</td>
       </tr>
     `);
   });
 
-  // 3. NHÉT THÊM THẺ TỔNG CỘNG VÀO CUỐI MẢNG HTML
+  // 4. XỬ LÝ GỘP CỘT (COLSPAN) CHO DÒNG TỔNG CỘNG
+  let totalRowTienHtml = isVP
+    ? `
+      <td colspan="4"></td> <!-- VP cách 4 cột: Sản phẩm, HD, PO, Đơn giá -->
+      <td style="color: #e11d48; font-size: 14px;">${totalTien.toLocaleString("vi-VN")}</td>
+      <td colspan="2"></td> <!-- VP cách 2 cột cuối: Trạng thái, Thao tác -->
+  `
+    : `
+      <td colspan="3"></td> <!-- Xưởng bị ẩn 4 cột giữa nên chỉ còn 3 cột cuối: Sản phẩm, Trạng thái, Thao tác -->
+  `;
+
   htmlRows.push(`
     <tr style="font-weight: bold; background-color: #e2e8f0;">
       <td colspan="5" style="text-align: right; color: #334155;">TỔNG CỘNG:</td>
       <td style="color: var(--danger); font-size: 14px;">${totalSL.toLocaleString("vi-VN")}</td>
-      <td colspan="4"></td>
-      <td style="color: #8A2BE2; font-size: 14px;">${totalTien.toLocaleString("vi-VN")}</td>
-      <td colspan="2"></td>
+      ${totalRowTienHtml}
     </tr>
   `);
 
-  // Đổ toàn bộ mảng vào DOM cùng lúc (Mất 1 phần nghìn giây)
   tbody.innerHTML = htmlRows.join("");
 }
 // Phê duyệt phiếu
