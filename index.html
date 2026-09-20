@@ -117,28 +117,28 @@
           onclick="switchTab('tab-giaodich')"
           id="btn-tab-giaodich"
         >
-          Bảng phát sinh DC
+          🏁 PHÁT SINH DC
         </button>
         <button
           class="nav-btn hidden"
           onclick="switchTab('tab-vattu')"
           id="btn-tab-vattu"
         >
-          Quản Lý Dụng Cụ
+          🚦 QUẢN LÝ DC
         </button>
         <button
           class="nav-btn hidden"
           onclick="switchTab('tab-ncc')"
           id="btn-tab-ncc"
         >
-          Nhà Cung Cấp
+          🏚 NHÀ CUNG CẤP
         </button>
         <button
           class="nav-btn hidden"
           onclick="switchTab('tab-baocao')"
           id="btn-tab-baocao"
         >
-          📊 Báo Cáo Tổng Hợp
+          📊 BẢNG TỔNG HỢP
         </button>
       </div>
 
@@ -173,7 +173,7 @@
             >
               <!-- Khu vực form -->
               <div class="action-form" style="flex: 1; min-width: 300px">
-                <h2>Tạo Phiếu Giao Dịch</h2>
+                <h2>Tạo Phiếu</h2>
                 <input
                   type="date"
                   id="txDate"
@@ -337,7 +337,7 @@
 
           <!-- Sub-tab: Lịch Sử & Phê Duyệt -->
           <div id="giaodich-lichsu" class="sub-content hidden card">
-            <h2>Lịch Sử & Phê Duyệt</h2>
+            <h2>Lịch Sử & Duyệt</h2>
             <!-- Bộ lọc Lịch Sử -->
             <div
               id="filterZone"
@@ -765,7 +765,7 @@
           gap: 15px;
         "
       >
-        <h3 style="margin: 0; color: #1e293b">Báo Cáo</h3>
+        <h3 style="margin: 0; color: #1e293b">TỔNG HỢP</h3>
         <div
           style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"
         >
@@ -819,6 +819,7 @@
         <table id="reportTable" class="table">
           <thead>
             <tr>
+              <th>Ngày Tháng</th>
               <th>Mã Dụng Cụ</th>
               <th>Tên Dụng Cụ</th>
               <th style="color: var(--happy)">Nhập Mới</th>

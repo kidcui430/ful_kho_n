@@ -852,6 +852,7 @@ function removeFromCart(index) {
 }
 
 async function submitTransaction() {
+  if (!confirm("Xác nhận tạo phiếu?")) return;
   if (cart.length === 0) return alert("Giỏ hàng đang trống!");
 
   showLoadingSpinner();
@@ -1561,7 +1562,7 @@ async function confirmApproval(action) {
 }
 
 function generateReport() {
-  console.log("=== BẮT ĐẦU CHẠY BÁO CÁO ==="); // Đoạn này để dò lỗi
+  console.log("=== BẢNG TỔNG HỢP ===");
 
   const fromDate = document.getElementById("repFrom")
     ? document.getElementById("repFrom").value
@@ -1573,13 +1574,10 @@ function generateReport() {
     ? document.getElementById("repSearch").value.toLowerCase().trim()
     : "";
 
-  // Lấy an toàn giá trị lọc
-  const filterElement = document.getElementById("repFilterType");
+  const filterElement = document.getElementById("repFilterType"); // Nhớ dùng đúng ID mới nha
   const filterType = filterElement
     ? filterElement.value.toLowerCase().trim()
     : "";
-
-  console.log("Loại giao dịch đang chọn:", filterType);
 
   const tbody = document.querySelector("#reportTable tbody");
   if (!tbody) return;
@@ -1597,7 +1595,6 @@ function generateReport() {
     );
   }
 
-  // LOGIC LỌC SIÊU AN TOÀN: Ép tất cả về chữ thường và cắt khoảng trắng
   if (filterType !== "") {
     validTxs = validTxs.filter((tx) => {
       let loaiGD = (tx.loai_giao_dich || tx.loai_gd || "").toLowerCase().trim();
@@ -1605,16 +1602,23 @@ function generateReport() {
     });
   }
 
-  console.log("Số lượng phiếu lọc được:", validTxs.length);
-
   let reportData = {};
+
   validTxs.forEach((tx) => {
     let ma = tx.ma_hang;
     if (!ma || ma === "CHO_MAP") return;
 
-    if (!reportData[ma]) {
+    // Lấy chuỗi ngày YYYY-MM-DD (cắt bỏ phần giờ phút)
+    let rawDate = (tx.thoi_gian_gd || tx.created_at || "").substring(0, 10);
+
+    // TẠO KEY GỘP: Phân tách riêng từng mã theo từng ngày
+    let groupKey = rawDate + "_" + ma;
+
+    if (!reportData[groupKey]) {
       const itemDb = inventoryData.find((i) => i.ma_hang === ma);
-      reportData[ma] = {
+      reportData[groupKey] = {
+        ngay_thang: rawDate,
+        ma_hang: ma,
         ten_hang: itemDb ? itemDb.ten_hang : tx.ten_chuan || tx.ten_hang,
         nhap_moi: 0,
         xuong_muon: 0,
@@ -1630,19 +1634,20 @@ function generateReport() {
     let tien = parseInt(tx.thanh_tien) || 0;
 
     if (loai === "nhập mới" || loai === "nhập dc mới") {
-      reportData[ma].nhap_moi += sl;
-      reportData[ma].tong_tien += tien;
-    } else if (loai === "xưởng mượn") reportData[ma].xuong_muon += sl;
-    else if (loai === "xưởng trả") reportData[ma].xuong_tra += sl;
-    else if (loai === "xuất gc") reportData[ma].xuat_gc += sl;
-    else if (loai === "nhập gc") reportData[ma].tong_tien += tien;
-    else if (loai === "xuất thanh lý") reportData[ma].thanh_ly += sl;
+      reportData[groupKey].nhap_moi += sl;
+      reportData[groupKey].tong_tien += tien;
+    } else if (loai === "xưởng mượn") reportData[groupKey].xuong_muon += sl;
+    else if (loai === "xưởng trả") reportData[groupKey].xuong_tra += sl;
+    else if (loai === "xuất gc") reportData[groupKey].xuat_gc += sl;
+    else if (loai === "nhập gc") reportData[groupKey].tong_tien += tien;
+    else if (loai === "xuất thanh lý") reportData[groupKey].thanh_ly += sl;
   });
 
-  let finalArray = Object.keys(reportData).map((ma) => ({
-    ma_hang: ma,
-    ...reportData[ma],
-  }));
+  // Đẩy ra mảng
+  let finalArray = Object.keys(reportData).map((key) => reportData[key]);
+
+  // Sắp xếp báo cáo ưu tiên hiển thị ngày mới nhất lên trên
+  finalArray.sort((a, b) => b.ngay_thang.localeCompare(a.ngay_thang));
 
   if (search) {
     finalArray = finalArray.filter(
@@ -1653,7 +1658,7 @@ function generateReport() {
   }
 
   if (finalArray.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px;">Không có dữ liệu!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 20px;">Không có dữ liệu!</td></tr>`;
     return;
   }
 
@@ -1676,8 +1681,16 @@ function generateReport() {
     let tongTienFmt =
       r.tong_tien > 0 ? Number(r.tong_tien).toLocaleString("vi-VN") : "-";
 
+    // Format ngày từ YYYY-MM-DD sang DD/MM/YYYY cho đẹp mắt
+    let displayDate = r.ngay_thang;
+    if (displayDate && displayDate.includes("-")) {
+      let [y, m, d] = displayDate.split("-");
+      displayDate = `${d}/${m}/${y}`;
+    }
+
     htmlRows.push(`
       <tr>
+        <td style="font-weight: bold; color: #475569;">${displayDate}</td>
         <td style="font-weight: bold;">${r.ma_hang}</td>
         <td style="font-weight: 500; color: var(--primary);">${r.ten_hang}</td>
         <td style="font-weight: bold;">${r.nhap_moi > 0 ? r.nhap_moi : "-"}</td>
@@ -1692,7 +1705,8 @@ function generateReport() {
 
   htmlRows.push(`
     <tr style="font-weight: bold; background-color: #e2e8f0;">
-      <td colspan="2" style="text-align: right; color: #334155;">TỔNG TOÀN BỘ:</td>
+      <!-- Gộp 3 cột đầu: Ngày Tháng, Mã, Tên -->
+      <td colspan="3" style="text-align: right; color: #334155;">TỔNG TOÀN BỘ:</td>
       <td style="color: var(--success)">${sumNhapMoi > 0 ? sumNhapMoi : "-"}</td>
       <td style="color: var(--warning)">${sumXuongMuon > 0 ? sumXuongMuon : "-"}</td>
       <td style="color: #64748b">${sumXuongTra > 0 ? sumXuongTra : "-"}</td>
